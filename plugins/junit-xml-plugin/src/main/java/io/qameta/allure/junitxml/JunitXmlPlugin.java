@@ -156,7 +156,6 @@ public class JunitXmlPlugin implements Reader {
                 .setName(name)
                 .setHostname(hostname)
                 .setTimestamp(getUnix(timestamp));
-//        separateLogFiles(resultsDirectory, name);
         testSuiteElement.get(TEST_CASE_ELEMENT_NAME)
                 .forEach(element -> parseTestCase(info, element,
                         resultsDirectory, parsedFile, context, visitor));

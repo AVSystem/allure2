@@ -60,7 +60,7 @@ public class SeparatedLogFile {
         final String testName = xmlElement.getAttribute(NAME_ATTRIBUTE_NAME);
         className = xmlElement.getAttribute(CLASS_NAME_ATTRIBUTE_NAME);
         status = getStatus(xmlElement);
-        tmpFileName = ((status.equals(Status.FAILED)) ? "" : "success_")
+        tmpFileName = (isFailureOrError() ? "" : "success_")
                 + className + NAME_SEPARATOR + testName + TXT_EXTENSION;
         try {
             tmpFile = File.createTempFile(PREFIX, tmpFileName).toPath();
@@ -73,8 +73,8 @@ public class SeparatedLogFile {
 
     private void writeToLogFile() {
         try {
-            if (status.equals(Status.FAILED)) {
-                final String errorMessage = xmlElement.getFirst(FAILURE_ELEMENT_NAME).get().getValue();
+            if (isFailureOrError()) {
+                final String errorMessage = xmlElement.getFirst(getElementName()).get().getValue();
                 Files.write(tmpFile, errorMessage.getBytes(StandardCharsets.UTF_8));
             } else {
                 final Path sourcePath = resultsDirectory.resolve(className + TXT_EXTENSION);
@@ -94,20 +94,27 @@ public class SeparatedLogFile {
     private Status getStatus(final XmlElement testCaseElement) {
         if (testCaseElement.contains(FAILURE_ELEMENT_NAME)) {
             return Status.FAILED;
-        }
-        if (testCaseElement.contains(ERROR_ELEMENT_NAME)) {
+        } else if (testCaseElement.contains(ERROR_ELEMENT_NAME)) {
             return Status.BROKEN;
-        }
-        if (testCaseElement.contains(SKIPPED_ELEMENT_NAME)) {
+        } else if (testCaseElement.contains(SKIPPED_ELEMENT_NAME)
+                || testCaseElement.containsAttribute(STATUS_ATTRIBUTE_NAME)
+                && testCaseElement.getAttribute(STATUS_ATTRIBUTE_NAME).equals(SKIPPED_ATTRIBUTE_VALUE)
+        ) {
             return Status.SKIPPED;
+        } else {
+            return Status.PASSED;
         }
+    }
 
-        if ((testCaseElement.containsAttribute(STATUS_ATTRIBUTE_NAME))
-                && (testCaseElement.getAttribute(STATUS_ATTRIBUTE_NAME).equals(SKIPPED_ATTRIBUTE_VALUE))) {
-            return Status.SKIPPED;
+    private boolean isFailureOrError() {
+        return status.equals(Status.FAILED) || status.equals(Status.BROKEN);
+    }
+
+    private String getElementName() {
+        if (status.equals(Status.FAILED)) {
+            return FAILURE_ELEMENT_NAME;
         }
-
-        return Status.PASSED;
+        return ERROR_ELEMENT_NAME;
     }
 
     public Optional<Path> getLogFile() {
